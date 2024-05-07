@@ -32,7 +32,11 @@ But I don't know how"
     - Please separate the rhymes from the lyrics and list them first. Use the rhymes in the lyrics you write
     """
     response = model.generate_content(prompt_template)
-    lyrics = response.text
+    if len(response.candidates[0].content.parts) > 0:
+        lyrics =  response.candidates[0].content.parts[0].text
+    else: 
+        lyrics =  response.text
+    # lyrics = response.text
     # Assuming rhymes are always prefixed with "Rhymes:" and followed by "Lyrics:"
     rhymes_index = lyrics.find("Rhymes:")
     lyrics_index = lyrics.find("Lyrics:")
