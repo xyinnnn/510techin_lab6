@@ -1,38 +1,68 @@
-# Import necessary libraries
-import openai
 import os
+import streamlit as st
 from dotenv import load_dotenv
+import google.generativeai as genai
 
-# Load environment variables
 load_dotenv()
 
-# Set up OpenAI API key
-openai.api_key = os.getenv("OPENAI_API_KEY")
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel('gemini-pro')
 
-def send_prompt(prompt_text):
-    try:
-        # Sending a request to the OpenAI API
-        response = openai.Completion.create(
-            engine="text-davinci-002",  # You can choose different models
-            prompt=prompt_text,
-            max_tokens=150
-        )
-        return response.choices[0].text.strip()
-    except Exception as e:
-        return str(e)
 
-# Direct Prompt
-direct_prompt = "Explain the theory of relativity."
-print("Direct Prompt Response:", send_prompt(direct_prompt))
+def generate_lyrics(theme, count):
+    prompt_template = f"""
+    You are Noel Gallagher, a songwriter and guitarist known for his work with the band Oasis. Here's some of the styles of lyrics you've written in the past:
+    
+"Today is gonna be the day
+That they're gonna throw it back to you
+By now, you should've somehow
+Realized what you gotta do
+I don't believe that anybody
+Feels the way I do, about you now"
 
-# Few-shot Learning Example
-few_shot_prompt = """Q: What is photosynthesis?
-A: Photosynthesis is the process by which green plants and some other organisms use sunlight to synthesize foods from carbon dioxide and water. Photosynthesis in plants generally involves the green pigment chlorophyll and generates oxygen as a byproduct.
+"And all the roads we have to walk are winding
+And all the lights that lead us there are blinding
+There are many things that I would like to say to you
+But I don't know how"
 
-Q: What is quantum entanglement?
-A: """
-print("Few-shot Prompt Response:", send_prompt(few_shot_prompt))
+    Please create lyrics and provide a list of rhymes based on the following details:
+    - Theme: {theme}
+    - Number of rhymes requested: {count}
+    - Follow your own lyrics writing style
+    - Please separate the rhymes from the lyrics and list them first. Use the rhymes in the lyrics you write
+    """
+    response = model.generate_content(prompt_template)
+    lyrics = response.text
+    # Assuming rhymes are always prefixed with "Rhymes:" and followed by "Lyrics:"
+    rhymes_index = lyrics.find("Rhymes:")
+    lyrics_index = lyrics.find("Lyrics:")
 
-# Zero-shot Technique
-zero_shot_prompt = "Write a poem about the ocean."
-print("Zero-shot Prompt Response:", send_prompt(zero_shot_prompt))
+    if rhymes_index != -1 and lyrics_index != -1:
+        rhymes = lyrics[rhymes_index + len("Rhymes:"):lyrics_index].strip()
+        lyrics = lyrics[lyrics_index + len("Lyrics:"):].strip()
+    else:
+        rhymes = "No rhymes provided."
+        lyrics = lyrics.strip()  # Assume the whole text is lyrics if no clear separation
+
+    return lyrics, rhymes
+
+
+st.title("🎤 AI Oasis Lyric Generator")
+image_url = "https://example.com/oasis-band.jpg"
+st.image(image_url)
+
+theme = st.text_input("Enter the theme of your song:")
+rhyme_count = st.number_input("Enter the number of rhymes you want:", min_value=1, value=5)
+
+if st.button("Generate Lyrics"):
+    lyrics, rhymes = generate_lyrics(theme, rhyme_count)
+    
+    # Display lyrics with improved layout
+    st.subheader("Lyrics")
+    st.text_area("Here are your lyrics:", lyrics, height=300)
+
+    # Optionally display rhymes if needed
+    st.subheader("Rhymes")
+    st.text(rhymes)
+
+
